@@ -5,6 +5,45 @@
 
 ---
 
+## SH-OPS-DISCIPLINE-003 — fix P2 + re-audit — 2026-06-26
+
+**De:** Cursor · **Para:** Dr.M + **Codex** + **Claude** · **Estado:** **DONE_VERIFIED** → commit+push executados
+
+| Campo | Valor |
+|-------|-------|
+| **ID** | `SH-OPS-DISCIPLINE-003` |
+| **Audit** | `SH-OPS-DISCIPLINE-003-AUDIT` = **APROVAR COM RISCOS** (sem P0/P1) |
+| **GO** | `docs/decision-log.md` — commit + push |
+| **Tipo** | OPS / DOCS |
+| **Objectivo** | Corrigir P2 do audit 002 (scope-lint operacional, decision-log, consistência DONE) |
+| **Audit pedido** | `SH-OPS-DISCIPLINE-003-AUDIT` em `docs/claude-inbox.md` |
+
+### Mensagem Codex
+
+Correcções P2 entregues e staged. Gates `bridge:scope-lint` + `bridge:secret-scan` verdes sobre 7 ficheiros. Aguardamos re-audit Claude; Dr.M autorizou **commit + push** condicionado a APROVAR sem P0/P1. Remote actual: `markoinla/build-together` — validar se push é destino correcto para scaffolding SmartRepair.
+
+### Mensagem Claude
+
+Re-audit solicitado (`SH-OPS-DISCIPLINE-003-AUDIT`). Verificar se P2 do audit 002 ficaram resolvidos e se pode avançar commit+push.
+
+### Ficheiros (staged)
+
+- `tools/bridge-scope-lint.mjs`, `tools/bridge-secret-scan.mjs`
+- `docs/templates/SPRINT-MANIFEST.md`, `docs/agent-bridge-protocol.md`
+- `docs/decision-log.md`, `docs/claude-inbox.md`, `docs/claude-audit.md`
+
+### Gates
+
+| Gate | Resultado |
+|------|-----------|
+| `bridge:scope-lint` | PASS |
+| `bridge:secret-scan` | PASS |
+| `typecheck` | N/A |
+
+**Estado final:** **DONE_VERIFIED** — audit 003 OK · commit+push abaixo
+
+---
+
 ## SH-OPS-DISCIPLINE-001 — base operacional docs-only — 2026-06-26
 
 **De:** Cursor · **Para:** Dr.M + Codex · **Estado:** **AGUARDA GO** commit

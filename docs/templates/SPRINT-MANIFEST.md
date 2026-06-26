@@ -2,6 +2,8 @@
 
 > Preencher **uma cópia por sprint** (ou secção dedicada no outbox com o mesmo ID).
 > Sprints sensíveis **exigem** manifest antes de implementação. Referência: `docs/agent-bridge-protocol.md` §16.
+>
+> **Scope-lint:** as secções `## Ficheiros Permitidos` e `## Ficheiros Proibidos` abaixo são lidas por `tools/bridge-scope-lint.mjs` — usar globs reais, um path por bullet.
 
 ---
 
@@ -16,21 +18,36 @@
 
 ---
 
+## Ficheiros Permitidos
+
+> Defaults para sprints docs/ops — **substituir** por sprint com globs exactos.
+
+- docs/**
+- tools/**
+- package.json
+
+---
+
+## Ficheiros Proibidos
+
+- .env
+- .env.*
+- app/**
+- frontend/**
+- supabase/**
+- migrations/**
+- **/.playwright/**
+- **/*.key
+- **/*.pem
+
+---
+
 ## Scope
 
 ### Permitido
 
 - _lista concreta do que o agente pode fazer_
 - _ex.: criar ficheiros em `docs/` apenas_
-
-### Ficheiros permitidos
-
-- _paths exactos ou globs restritos_
-- _ex.: `docs/COMMAND-CENTER.md`, `docs/templates/*.md`_
-
-### Ficheiros proibidos
-
-- _ex.: `.env`, `supabase/migrations/*`, `app/**`, secrets, Edge Functions_
 
 ### Fora de scope (não fazer)
 
@@ -42,6 +59,8 @@
 
 | Gate | Aplicável? | Comando / evidência |
 |------|------------|---------------------|
+| `bridge:scope-lint` | SIM | `npm run bridge:scope-lint` (ou `--manifest` cópia do sprint) |
+| `bridge:secret-scan` | SIM | `npm run bridge:secret-scan` |
 | `typecheck` | SIM / NÃO / N/A | _ex.: `pnpm typecheck`_ |
 | Testes scope | SIM / NÃO / N/A | _ex.: `pnpm test --filter=...`_ |
 | Build scope | SIM / NÃO / N/A | _ex.: `pnpm build`_ |
@@ -63,7 +82,7 @@
 
 ## Critério DONE
 
-Marcar **DONE** apenas quando **todos** forem verdade:
+Marcar **DONE_CLAIMED** apenas quando **todos** forem verdade:
 
 1. Objectivo do manifest cumprido
 2. Gates aplicáveis verdes (ou N/A documentado)
@@ -72,7 +91,9 @@ Marcar **DONE** apenas quando **todos** forem verdade:
 5. `docs/COMMAND-CENTER.md` reflecte estado actual
 6. Working tree explicado (secção abaixo)
 7. Claude audit concluído se **SIM** acima
-8. Estado final explícito: **DONE** / **BLOQUEADO** / **AGUARDA GO**
+8. Estado final explícito: **DONE_CLAIMED** / **BLOQUEADO** / **AGUARDA GO**
+
+**DONE_VERIFIED** só após validação independente (Claude/Kimi quando sensível). `DONE` sem qualificador = inválido.
 
 ---
 
@@ -101,11 +122,11 @@ Marcar **DONE** apenas quando **todos** forem verdade:
 ```text
 ID: SH-OPS-DISCIPLINE-001
 Tipo: docs
-Scope: docs/COMMAND-CENTER.md, docs/templates/*, agent-bridge-protocol.md, cursor-outbox.md
-Proibido: código, migrations, .env, deploy
-Gates: git diff --stat (docs only) — typecheck N/A
+Ficheiros Permitidos: docs/**, tools/**, package.json
+Ficheiros Proibidos: .env, app/**, supabase/**
+Gates: bridge:scope-lint + bridge:secret-scan — typecheck N/A
 Claude: NÃO
 Kimi: NÃO
 Deploy: NÃO
-DONE: ficheiros criados + outbox + AGUARDA GO commit
+Estado: DONE_CLAIMED + AGUARDA GO commit
 ```

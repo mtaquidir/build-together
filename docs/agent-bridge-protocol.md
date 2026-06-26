@@ -144,9 +144,9 @@ Próximo passo:
 ### DONE_CLAIMED vs DONE_VERIFIED
 
 ```
-PENDING → IN_PROGRESS → AWAITING_GO → DONE_CLAIMED → DONE_VERIFIED
-                                              ↑              ↑
-                                         só Cursor    validação independente
+AGUARDA GO → DONE_CLAIMED → DONE_VERIFIED
+                  ↑              ↑
+             só Cursor    validação independente
 ```
 
 | Transição | Quem | Exige |
@@ -202,7 +202,7 @@ PENDING → IN_PROGRESS → AWAITING_GO → DONE_CLAIMED → DONE_VERIFIED
 | 5. Infra | Cursor documenta; DEPLOY-CHECKLIST se deploy |
 | 6. Ponte | COMMAND-CENTER + outbox + inbox/audit + decision-log |
 | 7. Working tree | Cursor explica `git status` |
-| 8. Próximo passo | DONE / BLOQUEADO / AGUARDA GO / STALE |
+| 8. Próximo passo | DONE_CLAIMED / DONE_VERIFIED / BLOQUEADO / AGUARDA GO / STALE |
 
 Referência: `.cursor/rules/dod-10-10.mdc`
 
