@@ -3,7 +3,7 @@
 > **SSOT** para comunicação entre agentes no ecossistema SmartRepair / SmartDiag / Smart House.
 > Quando houver conflito com docs legacy ou sessões antigas, **este ficheiro prevalece**.
 >
-> Versão: 2026-06-26 · Docs-only (sem automação).
+> Versão: 2026-06-26 · Gates automáticos (`tools/bridge-*.mjs`).
 
 ---
 
@@ -98,7 +98,7 @@ Gates:
 Riscos:
 Claude necessário: SIM/NÃO + motivo
 Kimi necessário: SIM/NÃO + motivo (só se Dr.M pedir)
-Estado final: DONE / BLOQUEADO / AGUARDA GO / STALE / REOPEN
+Estado final: DONE_CLAIMED / DONE_VERIFIED / BLOQUEADO / AGUARDA GO / STALE / REOPEN
 
 Checklist anti-scope-creep:
 - Nova fase tem GO Dr.M? SIM/NÃO
@@ -130,15 +130,31 @@ Próximo passo:
 
 | Estado | Significado |
 |--------|-------------|
-| **Cursor DONE** | Trabalho entregue e provado conforme DoD 10/10 |
+| **DONE_CLAIMED** | Cursor declarou entrega — gates locais corridos, diff/commit hash, working tree explicado. **Máximo que o executor atinge sozinho.** |
+| **DONE_VERIFIED** | Evidência validada independentemente (Claude/Kimi quando sensível). **Nenhum agente executor pode auto-atribuir.** |
 | **Claude APROVAR** | Sem P0/P1; pode ainda precisar GO Dr.M para commit/deploy |
 | **Claude APROVAR COM RISCOS** | Sem bloqueio; P2/P3 documentados |
 | **Claude BLOQUEAR** | P0/P1 ou risco que impede avanço |
-| **Dr.M GO** | Autorização explícita (commit, push, deploy ou nova fase) |
+| **Dr.M GO** | Autorização estruturada (§17) — commit, push, deploy ou nova fase |
 | **Dr.M NO-GO** | Não avançar |
 | **AGUARDA GO** | Pronto; espera decisão Dr.M |
 | **STALE** | AGUARDA GO há >24h; **não é erro técnico** — Dr.M ocupado |
 | **REOPEN** | Item fechado reaberto por P0/P1/P2 relevante |
+
+### DONE_CLAIMED vs DONE_VERIFIED
+
+```
+PENDING → IN_PROGRESS → AWAITING_GO → DONE_CLAIMED → DONE_VERIFIED
+                                              ↑              ↑
+                                         só Cursor    validação independente
+```
+
+| Transição | Quem | Exige |
+|-----------|------|-------|
+| → **DONE_CLAIMED** | Cursor | objectivo cumprido · gates §16 verdes · outbox + COMMAND-CENTER · sem P0/P1 novos |
+| → **DONE_VERIFIED** | Claude / Kimi / verificação read-only | evidência anexada · segunda assinatura se sensível · alinhado com diff real |
+
+**Regra:** `DONE` sem qualificador = inválido. Usar sempre `DONE_CLAIMED` ou `DONE_VERIFIED`.
 
 ---
 
@@ -209,6 +225,73 @@ Referência: `.cursor/rules/dod-10-10.mdc`
 | **`docs/templates/SPRINT-MANIFEST.md`** | Template obrigatório para **cada sprint sensível** — scope, ficheiros permitidos/proibidos, gates, audit Kimi/Claude, critério DONE |
 | **`docs/templates/DEPLOY-CHECKLIST.md`** | Template obrigatório para **cada deploy** — autorização, target, commit exacto, comandos, smoke, PASS/FAIL, registo outbox |
 
-**Fluxo:** Dr.M define sprint → Cursor preenche manifest → implementa → audit se trigger → preenche deploy checklist se deploy → actualiza COMMAND-CENTER + outbox → AGUARDA GO ou DONE.
+**Fluxo:** Dr.M define sprint → Cursor preenche manifest → implementa → gates §16 → audit se trigger → preenche deploy checklist se deploy → actualiza COMMAND-CENTER + outbox → DONE_CLAIMED → DONE_VERIFIED (se sensível).
 
 Ver também: `docs/agent-orchestration-runbook.md`
+
+---
+
+## 16. Gates obrigatórios (pre-commit / pre-push)
+
+Antes de **stage final** e **commit**, Cursor corre:
+
+```bash
+node tools/bridge-scope-lint.mjs --manifest <manifest-do-sprint> --staged
+node tools/bridge-secret-scan.mjs --staged
+```
+
+Atalhos npm (manifest template por defeito — substituir `<manifest>` por cópia do sprint quando sensível):
+
+```bash
+npm run bridge:scope-lint    # equivale a --manifest docs/templates/SPRINT-MANIFEST.md --staged
+npm run bridge:secret-scan
+```
+
+| Gate | Função | FAIL implica |
+|------|--------|--------------|
+| **bridge-scope-lint** | Ficheiros staged ⊆ manifest permitidos; nenhum proibido | BLOQUEADO — não commit |
+| **bridge-secret-scan** | Diff staged sem JWT, private keys, API keys | BLOQUEADO — não commit |
+
+Validação de sintaxe (sem diff):
+
+```bash
+node --check tools/bridge-scope-lint.mjs
+node --check tools/bridge-secret-scan.mjs
+```
+
+Gates de sprint (typecheck, testes, build) continuam no manifest — §16 não os substitui.
+
+---
+
+## 17. GO Dr.M estruturado
+
+Autorização **não** é texto livre. Registar em `docs/decision-log.md` (e referenciar no outbox) com **todos** os campos:
+
+| Campo | Descrição |
+|-------|-----------|
+| **order_id** | ID único do sprint/ordem (ex.: `SH-OPS-DISCIPLINE-002`) |
+| **scope_hash** | Hash estável do escopo aprovado (manifest + lista de ficheiros ou `git diff` acordado) |
+| **ambiente** | `local` / `staging` / `prod` |
+| **autorizado_para** | `commit` / `push` / `deploy` / `db_push` / `secrets` — um ou mais, explícitos |
+| **granted_at** | ISO 8601 UTC |
+| **expires_at** | ISO 8601 UTC — GO expirado = inválido |
+
+**Exemplo:**
+
+```json
+{
+  "order_id": "SH-OPS-DISCIPLINE-002",
+  "scope_hash": "sha256:abc123…",
+  "ambiente": "local",
+  "autorizado_para": ["commit"],
+  "granted_at": "2026-06-26T19:00:00Z",
+  "expires_at": "2026-06-27T19:00:00Z"
+}
+```
+
+**Regras:**
+
+- Um GO vale para **uma** `order_id`, **um** `scope_hash`, **um** `ambiente`.
+- Reutilizar GO antigo ou aplicar a escopo diferente → **inválido** (não commit / push / deploy).
+- `autorizado_para: commit` **não** implica push nem deploy — cada acção precisa de GO ou campo explícito.
+- Cursor verifica `expires_at` antes de executar; expirado → **AGUARDA GO** novo.

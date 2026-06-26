@@ -1,0 +1,9 @@
+{
+  "name": "build-together",
+  "private": true,
+  "description": "Bridge tooling and repo scripts for build-together / Smart House ops",
+  "scripts": {
+    "bridge:scope-lint": "node tools/bridge-scope-lint.mjs --manifest docs/templates/SPRINT-MANIFEST.md --staged",
+    "bridge:secret-scan": "node tools/bridge-secret-scan.mjs --staged"
+  }
+}
